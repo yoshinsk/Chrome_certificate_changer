@@ -1,0 +1,49 @@
+<!doctype html>
+<!-- extension/panel.html | 法人の切替と、既存証明書の登録・更新を行う画面。 -->
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>法人別 証明書切替</title>
+  <link rel="stylesheet" href="panel.css">
+  <script type="module" src="panel.js"></script>
+</head>
+<body>
+  <main>
+    <header><h1>法人別 証明書切替</h1><a id="expand" href="panel.html?tab" target="_blank" rel="noopener">タブで開く</a></header>
+    <section aria-label="銀行を開く">
+      <label for="entries">利用する登録</label>
+      <select id="entries"></select>
+      <p id="identity"></p>
+      <p class="status">使用証明書は未確認</p>
+      <button type="button" id="launch" class="primary">専用ウィンドウで銀行を開く</button>
+      <p class="help">切替前に、利用中の銀行でログアウトしてください。</p>
+      <div class="tools">
+        <button type="button" id="edit">登録・証明書を変更</button>
+        <button type="button" id="add">新規登録</button>
+      </div>
+      <details id="renewal" hidden>
+        <summary>銀行で証明書を更新する</summary>
+        <p class="help">これまで更新に使っていた Chrome または銀行指定のツールで手続きしてください。公式の更新URLを登録している場合は、そのページを開きます。</p>
+        <button type="button" id="renewHere">この Chrome で更新窓口を開く</button>
+        <button type="button" id="renewProfile">専用ウィンドウで更新窓口を開く</button>
+      </details>
+    </section>
+    <p id="notice" role="status" aria-live="polite"></p>
+    <form id="editor" hidden>
+      <h2 id="formTitle">新規登録</h2>
+      <label for="company">法人名</label><input id="company" maxlength="100" required>
+      <label for="service">銀行・サービス名</label><input id="service" maxlength="100" required>
+      <label for="usage">用途・担当者（任意）</label><input id="usage" maxlength="100">
+      <label for="url">銀行の公式ログインURL</label><input id="url" type="url" placeholder="https://" required>
+      <label for="renewalUrl">銀行の公式更新URL（任意）</label><input id="renewalUrl" type="url" placeholder="https://">
+      <label for="certificates">Windows に登録済みの証明書</label>
+      <select id="certificates" required></select>
+      <output id="certificateDetail" for="certificates"></output>
+      <button type="button" id="refresh">証明書一覧を再読み込み</button>
+      <p class="help">更新は銀行の画面や指定の更新ツールで行います。更新が終わったら一覧を再読み込みし、新しい証明書を選んで保存してください。</p>
+      <div class="tools"><button class="primary" id="save">保存</button><button type="button" id="cancel">閉じる</button></div>
+    </form>
+  </main>
+</body>
+</html>

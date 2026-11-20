@@ -1,0 +1,10 @@
+# 開発・検証で生成するファイル。証明書や秘密鍵は Git に含めない。
+__pycache__/
+*.pyc
+*.exe
+*.pfx
+*.p12
+*.key
+*.pem
+.yomiyasu/
+.venv/

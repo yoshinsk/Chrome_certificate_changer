@@ -1,0 +1,30 @@
+/* extension/panel.css | ポップアップと独立したタブで共通の入力画面を整える。 */
+:root { font: 14px/1.55 "Yu Gothic UI", Meiryo, sans-serif; color: #192d38; background: #f3f6f7; color-scheme: light; }
+* { box-sizing: border-box; }
+body { margin: 0 auto; min-width: 360px; max-width: 530px; }
+main { margin: 14px; }
+header, .tools { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+h1 { font-size: 20px; margin: 0; }
+h2 { font-size: 17px; margin: 0 0 12px; }
+header { margin-bottom: 14px; }
+a { color: #115b67; font-size: 13px; }
+section, form { background: white; border: 1px solid #cdd9de; border-radius: 8px; padding: 15px; }
+label { display: block; font-weight: 600; margin: 9px 0 3px; }
+select, input, button { font: inherit; border: 1px solid #a9bac1; border-radius: 5px; }
+select, input { width: 100%; min-height: 36px; padding: 4px 7px; background: white; color: inherit; }
+button { background: #fff; color: #174d58; padding: 6px 10px; cursor: pointer; }
+button.primary { background: #105a62; color: white; border-color: #105a62; }
+button:disabled { opacity: .53; cursor: default; }
+:focus-visible { outline: 3px solid #488cca; outline-offset: 1px; }
+#launch { width: 100%; }
+.status { color: #744d16; padding: 5px 9px; background: #faf1dd; border-left: 3px solid #cf9b43; }
+.help, #identity, output { font-size: 13px; color: #405966; }
+#identity { white-space: pre-line; overflow-wrap: anywhere; }
+output { display: block; white-space: pre-line; overflow-wrap: anywhere; margin: 6px 0; }
+#notice { white-space: pre-line; overflow-wrap: anywhere; }
+#notice.error { color: #8a2430; }
+#notice:empty { margin: 0; }
+details { margin-top: 12px; }
+summary { cursor: pointer; color: #174d58; }
+details button { margin: 2px 0; }
+form { margin-top: 12px; }
