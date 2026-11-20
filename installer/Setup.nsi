@@ -12,16 +12,16 @@ InstallDir "$LOCALAPPDATA\ChromeCertificateChanger"
 RequestExecutionLevel user
 ManifestDPIAware true
 SetCompressor /SOLID lzma
-BrandingText "${APP}"
+BrandingText "${APP} ${DISPLAYVERSION}"
 VIProductVersion "${VERSION}.0"
 VIAddVersionKey /LANG=1041 "ProductName" "${APP}"
 VIAddVersionKey /LANG=1041 "FileDescription" "${APP} セットアップ"
 VIAddVersionKey /LANG=1041 "FileVersion" "${VERSION}"
-VIAddVersionKey /LANG=1041 "ProductVersion" "${VERSION}"
+VIAddVersionKey /LANG=1041 "ProductVersion" "${DISPLAYVERSION}"
 VIAddVersionKey /LANG=1041 "LegalCopyright" "yoshinsk"
 
 !define MUI_WELCOMEPAGE_TITLE "法人別 証明書切替 をインストールします"
-!define MUI_WELCOMEPAGE_TEXT "普段の Chrome で、法人ごとに銀行を開くための試用版です。$\r$\n$\r$\n「インストール」を押してください。インストール後、Chrome に追加する手順が開きます。$\r$\n$\r$\nすでにお使いの証明書はそのまま利用できます。"
+!define MUI_WELCOMEPAGE_TEXT "複数の法人が同じ銀行を利用するための公開α版です。$\r$\n$\r$\n「インストール」を押してください。インストール後、Chrome に追加する手順が開きます。$\r$\n$\r$\nすでにお使いの証明書はそのまま利用できます。"
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_INSTFILES
 !define MUI_FINISHPAGE_TITLE "Windows の準備ができました"
@@ -65,6 +65,8 @@ FunctionEnd
   Delete "${PATH}\host\CertificateHost.exe"
   Delete "${PATH}\host\host.json"
   Delete "${PATH}\Guide.exe"
+  Delete "${PATH}\LICENSE.txt"
+  Delete "${PATH}\NSIS-COPYING.txt"
   RMDir "${PATH}\extension"
   RMDir "${PATH}\host"
   RMDir "${PATH}"
@@ -95,6 +97,9 @@ Section
   File "${ROOT}\native\host.json"
   SetOutPath "$INSTDIR\program-next"
   File "${PAYLOAD}\Guide.exe"
+  ; インストーラーを単体で再配布しても、本体と使用した NSIS のライセンスを読めるようにする。
+  File /oname=LICENSE.txt "${ROOT}\LICENSE"
+  File /oname=NSIS-COPYING.txt "${NSISDIR}\COPYING"
   SetOutPath "$INSTDIR"
   IfErrors install_error
   ; 全ファイルの展開に成功してから一定の配置先へ切り替える。上書き時も拡張機能のパスを保つ。
@@ -114,7 +119,7 @@ Section
   WriteRegStr HKCU "${HOSTKEY}" "" "$INSTDIR\program\host\host.json"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   WriteRegStr HKCU "${UNKEY}" "DisplayName" "${APP}"
-  WriteRegStr HKCU "${UNKEY}" "DisplayVersion" "${VERSION}"
+  WriteRegStr HKCU "${UNKEY}" "DisplayVersion" "${DISPLAYVERSION}"
   WriteRegStr HKCU "${UNKEY}" "UninstallString" '"$INSTDIR\Uninstall.exe"'
   WriteRegDWORD HKCU "${UNKEY}" "NoModify" 1
   WriteRegDWORD HKCU "${UNKEY}" "NoRepair" 1

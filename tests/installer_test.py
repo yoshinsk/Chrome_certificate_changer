@@ -51,10 +51,15 @@ class InstallerTest(unittest.TestCase):
                     manifest = json.loads(host_manifest.read_text(encoding="utf-8"))
                     self.assertTrue((host_manifest.parent / manifest["path"]).is_file())
                     self.assertTrue((program / "Guide.exe").is_file())
+                    # 配布用 EXE だけを受け取った場合も、著作権表示とライセンス全文を参照できる。
+                    self.assertEqual((program / "LICENSE.txt").read_bytes(), (ROOT / "LICENSE").read_bytes())
+                    self.assertGreater((program / "NSIS-COPYING.txt").stat().st_size, 0)
                     extension = (program / "extension")
                     sources = {p.name: p.read_bytes() for p in (ROOT / "extension").iterdir() if p.is_file()}
                     self.assertEqual({p.name: p.read_bytes() for p in extension.iterdir()}, sources)
-                    self.assertEqual(registry(APP_KEY, "DisplayVersion"), json.loads(sources["manifest.json"])["version"])
+                    extension_manifest = json.loads(sources["manifest.json"])
+                    self.assertEqual(registry(APP_KEY, "DisplayVersion"),
+                                     extension_manifest.get("version_name", extension_manifest["version"]))
                     self.assertEqual(marker.read_text(encoding="utf-8"), "維持する検証データ")
                     self.assertFalse((APP / "program-previous").exists())
             finally:
