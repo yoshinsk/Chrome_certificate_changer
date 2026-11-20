@@ -20,6 +20,7 @@ from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 HERE = Path(__file__).resolve().parent
 POWERSHELL = str(Path(os.environ["SystemRoot"]) / "System32/WindowsPowerShell/v1.0/powershell.exe")
 CASES = {"first": "A", "second": "B", "again": "A", "wrong": "A", "update": "A", "renewed": "A2", "panel": "A2"}
+CASES.update({"tab-a": "A", "tab-b": "B", "tab-clear": "A", "tab-after": "B", "tab-elsewhere": "B", "tab-back": "A"})
 
 
 def issue(name, issuer=None, server=False, days=1, key=None):
@@ -38,7 +39,7 @@ def issue(name, issuer=None, server=False, days=1, key=None):
         builder = builder.add_extension(x509.ExtendedKeyUsage([purpose]), False)
     if server:
         builder = builder.add_extension(x509.SubjectAlternativeName([
-            x509.IPAddress(ipaddress.ip_address("127.0.0.1"))]), False)
+            x509.IPAddress(ipaddress.ip_address("127.0.0.1")), x509.DNSName("localhost")]), False)
     return builder.sign(issuer[1] if issuer else key, hashes.SHA256()), key
 
 

@@ -7,7 +7,7 @@ import path from "node:path";
 import {session} from "./protocol.mjs";
 
 /** 使い捨てプロファイルに表示された公開の設定画面だけを操作し、拡張機能のカードが現れるまで待つ。 */
-export async function loadUnpacked(port, pid, extensionId) {
+export async function loadUnpacked(port, pid, extensionId, folder) {
   const endpoint = "http://127.0.0.1:" + port;
   const page = await (await fetch(endpoint + "/json/new?" + encodeURIComponent("chrome://extensions/"), {method: "PUT"})).json();
   const toolbar = "document.querySelector('extensions-manager')?.shadowRoot?.querySelector('extensions-toolbar')?.shadowRoot";
@@ -30,12 +30,13 @@ export async function loadUnpacked(port, pid, extensionId) {
   if (!opened) throw new Error("Chrome の拡張機能を読み込むボタンを押せませんでした。");
   const powershell = path.join(process.env.SystemRoot, "System32/WindowsPowerShell/v1.0/powershell.exe");
   await promisify(execFile)(powershell, ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
-    fileURLToPath(new URL("./select-folder.ps1", import.meta.url)), "-BrowserPid", String(pid)], {timeout: 22000});
+    fileURLToPath(new URL("./select-folder.ps1", import.meta.url)), "-BrowserPid", String(pid),
+    ...(folder ? ["-Folder", folder] : [])], {timeout: 22000});
   for (let i = 0; i < 80; i++) {
     if (await evaluate("Boolean(document.querySelector('extensions-manager')?.shadowRoot" +
         "?.querySelector('extensions-item-list')?.shadowRoot?.getElementById('" + extensionId + "'))")) {
       console.log("通常版 Chrome の追加画面で、配布版のフォルダーを選んで拡張機能を読み込みました。");
-      return;
+      return page.id;
     }
     await delay(120);
   }

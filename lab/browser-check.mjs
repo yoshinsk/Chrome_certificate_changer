@@ -16,6 +16,12 @@ const origin = "127.0.0.1:" + port;
 
 if (operation === "close") {
   await session("ws://" + origin + browserPath, port, send => send("Browser.close"));
+} else if (operation === "pid") {
+  // Edge の起動用プロセスが終了しても、この試験用の接続を所有する本体だけを操作する。
+  const {processInfo} = await session("ws://" + origin + browserPath, port, send => send("SystemInfo.getProcessInfo"));
+  const browser = processInfo.find(item => item.type === "browser");
+  if (!Number.isSafeInteger(browser?.id) || browser.id <= 0) throw new Error("試験ブラウザーの PID が不明です。");
+  console.log(browser.id);
 } else {
   const url = new URL(target);
   if (!["certificate", "error"].includes(operation) || url.origin !== "https://127.0.0.1:" + url.port ||

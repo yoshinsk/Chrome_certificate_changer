@@ -45,25 +45,28 @@ class LabProfile:
         PROFILES.mkdir(parents=True, exist_ok=True)
         self.path.mkdir(exist_ok=False)
         self.process = None
+        self.browser_pid = None
 
-    def start(self, fixture, extra=()):
+    def start(self, fixture, extra=(), executable=None):
         """この合成サーバーの公開鍵だけを専用プロセスの試験用例外にし、Windows の信頼ストアを保つ。"""
-        self.process = subprocess.Popen([str(chrome_path()), "--user-data-dir=" + str(self.path),
+        self.process = subprocess.Popen([str(executable or chrome_path()), "--user-data-dir=" + str(self.path),
             "--no-first-run", "--no-default-browser-check", "--disable-background-mode",
             "--disable-background-networking", "--force-renderer-accessibility", "--lang=en-US",
             "--ignore-certificate-errors-spki-list=" + fixture.pin,
             "--remote-debugging-port=0", "--remote-debugging-address=127.0.0.1", *extra, "about:blank"],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         deadline = time.monotonic() + 15
-        while time.monotonic() < deadline and self.process.poll() is None:
+        while time.monotonic() < deadline:
             if (self.path / "DevToolsActivePort").is_file():
+                self.browser_pid = int(subprocess.check_output(["node", str(HERE / "browser-check.mjs"),
+                                       str(self.path), "pid"], timeout=8))
                 return
             time.sleep(.15)
         raise TimeoutError("試験用 Chrome の起動を確認できません。")
 
     def stop(self):
         """自分が作った Chrome だけを PID 指定で終了し、子プロセスのプロファイル解放を待つ。"""
-        if self.process and self.process.poll() is None:
+        if self.process and (self.process.poll() is None or self.browser_pid):
             try:
                 subprocess.run(["node", str(HERE / "browser-check.mjs"), str(self.path), "close"],
                                check=True, capture_output=True, timeout=8)
@@ -72,6 +75,7 @@ class LabProfile:
                 if self.process.poll() is None:
                     subprocess.run(["taskkill", "/pid", str(self.process.pid), "/t", "/f"], capture_output=True)
                     self.process.wait(timeout=10)
+        self.browser_pid = None
         (self.path / "DevToolsActivePort").unlink(missing_ok=True)
 
     def close(self):
@@ -97,7 +101,7 @@ def choose(profile, cert, manual=False, cancel=False):
         print("Chrome で選択してください。", cert.subject.rfc4514_string(), serial, flush=True)
         return
     command = [POWERSHELL, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(HERE / "picker.ps1"),
-               "-BrowserPid", str(profile.process.pid), "-CommonName", cert.subject.rfc4514_string()[3:], "-Serial", serial]
+               "-BrowserPid", str(profile.browser_pid), "-CommonName", cert.subject.rfc4514_string()[3:], "-Serial", serial]
     subprocess.run(command + (["-Cancel"] if cancel else []), check=True, timeout=30)
 
 

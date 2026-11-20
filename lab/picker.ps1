@@ -22,6 +22,17 @@ while ([DateTime]::UtcNow -lt $deadline) {
     $visible = $false
     foreach ($window in $root.FindAll($scope::Children, $condition)) {
         $nodes = $window.FindAll($scope::Descendants, $all)
+        # Edge の選択行は名義・発行者・シリアルを1つの名前で公開する。合成証明書の一致する行だけを選ぶ。
+        $edgeRow = $nodes | Where-Object { $_.Current.ClassName -eq 'EdgeCertPickerRow' -and
+            $_.Current.Name.StartsWith($CommonName + ', ') -and
+            ($_.Current.Name -split ', ')[-1].Replace(':','').TrimStart('0') -ieq $Serial.TrimStart('0') } | Select-Object -First 1
+        if ($edgeRow) {
+            $edgeRow.SetFocus()
+            Start-Sleep -Milliseconds 900
+            $button = $nodes | Where-Object { $_.Current.Name -in $buttonNames -and $_.Current.IsEnabled -and
+                $_.Current.ControlType -eq [Windows.Automation.ControlType]::Button } | Select-Object -First 1
+            if ($button) { $button.GetCurrentPattern($invoke).Invoke(); return }
+        }
         $matches = @($nodes | Where-Object { $_.Current.Name -ceq $CommonName })
         if (!$matches) { continue }
         $visible = $true

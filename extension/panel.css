@@ -17,7 +17,7 @@ button.primary { background: #105a62; color: white; border-color: #105a62; }
 button:disabled { opacity: .53; cursor: default; }
 :focus-visible { outline: 3px solid #488cca; outline-offset: 1px; }
 #launch { width: 100%; }
-.status { color: #744d16; padding: 5px 9px; background: #faf1dd; border-left: 3px solid #cf9b43; }
+.status { color: #744d16; padding: 5px 9px; background: #faf1dd; border-left: 3px solid #cf9b43; white-space: pre-line; overflow-wrap: anywhere; }
 .help, #identity, output { font-size: 13px; color: #405966; }
 #identity { white-space: pre-line; overflow-wrap: anywhere; }
 output { display: block; white-space: pre-line; overflow-wrap: anywhere; margin: 6px 0; }

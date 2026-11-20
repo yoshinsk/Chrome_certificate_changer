@@ -15,13 +15,27 @@
       <label for="entries">利用する登録</label>
       <select id="entries"></select>
       <p id="identity"></p>
-      <p class="status">使用証明書は未確認</p>
+      <p class="status" id="tabStatus" role="status">使用証明書は未確認</p>
+      <button type="button" id="inspect">このタブの使用証明書を確認</button>
+      <button type="button" id="openHere" aria-describedby="sameTabHelp">このタブで銀行を開く</button>
+      <p class="help" id="sameTabHelp"></p>
       <button type="button" id="launch" class="primary">専用ウィンドウで銀行を開く</button>
       <p class="help">切替前に、利用中の銀行でログアウトしてください。次の取引に進む前に、銀行の画面で法人名・利用者名を確認してください。</p>
+      <details>
+        <summary>同じ銀行で、ウィンドウを増やさずに切り替えたいとき</summary>
+        <p class="help">銀行が Microsoft Edge に対応している場合は、Edge でログアウトしてから、電子証明書で接続したページのアドレス左のアイコンを押します。「証明書の選択」で現在の名義を確認し、「証明書の変更」→「変更」の順に押すと、同じタブで選び直せます。銀行ごとの手順もご確認ください。</p>
+      </details>
       <div class="tools">
         <button type="button" id="edit">登録・証明書を変更</button>
         <button type="button" id="add">新規登録</button>
       </div>
+      <details id="manualMatch">
+        <summary>銀行が画面に表示した指紋を照合する</summary>
+        <label for="reportedHash">銀行の「使用した証明書」に表示された SHA-256 指紋</label>
+        <input id="reportedHash" maxlength="95" autocomplete="off" spellcheck="false">
+        <button type="button" id="compareHash">選択中の銀行の登録と照合</button>
+        <output id="matchResult" role="status"></output>
+      </details>
       <details id="renewal" hidden>
         <summary>銀行で証明書を更新する</summary>
         <p class="help">これまで更新に使っていた Chrome または銀行指定のツールで手続きしてください。公式の更新URLを登録している場合は、そのページを開きます。</p>

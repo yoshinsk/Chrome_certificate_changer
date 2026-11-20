@@ -45,12 +45,14 @@ internal sealed class Guide : Form
         folder.Text = extensionFolder;
         folder.AccessibleName = "拡張機能のフォルダー";
         content.Controls.Add(folder);
+        AddText(content, "すでに追加済みの方は、Chrome に表示された「法人別 証明書切替」の再読み込みボタンを押すと更新できます。");
         AddText(content, "2. Chrome の右上で「デベロッパー モード」をオンにし、左上の「パッケージ化されていない拡張機能を読み込む」を押します。");
         AddText(content, "3. 開いた画面の下にある「フォルダー」欄をクリックし、Ctrl キーを押しながら V を押して貼り付けます。「フォルダーの選択」を押してください。");
         var next = AddText(content, "追加できたら");
         next.Font = new Font(Font, FontStyle.Bold);
         AddButton(content, "法人の登録画面を開く", delegate { OpenChrome(PanelUrl); });
         AddText(content, "次回は Chrome の拡張機能メニュー、または Windows のスタートメニューから開けます。");
+        AddText(content, "銀行のタブで使用証明書を確認するときは、Chrome 右上の拡張機能メニューから開いてください。");
         content.Controls.Add(status);
     }
 

@@ -1,5 +1,5 @@
 ﻿# lab/select-folder.ps1 | 試験が起動した Chrome のフォルダー選択画面に、配布版の実際の保存先を入力する。
-param([Parameter(Mandatory)][int]$BrowserPid)
+param([Parameter(Mandatory)][int]$BrowserPid, [string]$Folder = (Join-Path $env:LOCALAPPDATA 'ChromeCertificateChanger\program\extension'))
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient,UIAutomationTypes
 Add-Type @'
@@ -14,10 +14,14 @@ public static class FolderDialog {
     [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint message, IntPtr w, IntPtr l);
 }
 '@
-$folder = (Get-Item -LiteralPath (Join-Path $env:LOCALAPPDATA 'ChromeCertificateChanger\program\extension')).FullName
+$folder = (Get-Item -LiteralPath $Folder).FullName
+$manifest = Get-Content -Raw -Encoding utf8 -LiteralPath (Join-Path $folder 'manifest.json') | ConvertFrom-Json
+if ($manifest.name -ne '法人別 証明書切替') { throw 'この製品の試験対象フォルダーを指定してください。' }
 $process = Get-CimInstance Win32_Process -Filter "ProcessId=$BrowserPid"
 $prefix = [regex]::Escape((Join-Path ([IO.Path]::GetTempPath()) 'ccc-panel-'))
-if ($process.Name -ne 'chrome.exe' -or $process.CommandLine -notmatch $prefix) { throw '試験用 Chrome の PID を指定してください。' }
+$profileRoot = [regex]::Escape((Join-Path $env:LOCALAPPDATA 'ChromeCertificateChanger\profiles\'))
+if ($process.Name -ne 'chrome.exe' -or !$process.CommandLine.Contains('--remote-debugging-port=0') -or
+    ($process.CommandLine -notmatch $prefix -and $process.CommandLine -notmatch ($profileRoot + '[a-f0-9-]{36}'))) { throw '試験用 Chrome の PID を指定してください。' }
 $root = [Windows.Automation.AutomationElement]::RootElement
 $scope = [Windows.Automation.TreeScope]
 $owner = [Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::ProcessIdProperty,$BrowserPid)

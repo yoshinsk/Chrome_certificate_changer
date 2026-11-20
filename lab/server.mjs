@@ -25,8 +25,16 @@ const server = createServer({
   const wanted = fixture.cases[expected];
   const matches = wanted === actual;
   const event = {case: expected, wanted, actual: actual ?? "未登録", fingerprint, matches,
-    resumed: request.socket.isSessionReused(), protocol: request.socket.getProtocol()};
+    resumed: request.socket.isSessionReused(), protocol: request.socket.getProtocol(),
+    marker: (request.headers.cookie || "").split(/;\s*/).includes("ccc_tab_test=present")};
   console.log(JSON.stringify(event));
+  // 使い捨て Cookie の消去が実際に効いたかを調べ、クライアント証明書の選択履歴と区別する。
+  if (expected === "tab-a") response.setHeader("Set-Cookie", "ccc_tab_test=present; Secure; SameSite=Strict; Path=/");
+  if (expected === "tab-clear") response.setHeader("Clear-Site-Data", '"cookies", "cache"');
+  // 対応サイトの試験では、この要求で受信した証明書の指紋を返す。ほかのケースは非対応サイトを模す。
+  if (["tab-a", "tab-b", "tab-elsewhere"].includes(expected)) {
+    response.setHeader("Server-Timing", `mtls-client-cert-sha256;desc="${fingerprint}"`);
+  }
   response.writeHead(200, {"Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store",
     "Content-Security-Policy": "default-src 'none'; connect-src 'self'", Connection: "close"});
   response.end('<!doctype html><html lang="ja"><meta charset="utf-8"><title>証明書の照合</title>' +
