@@ -22,9 +22,10 @@ POWERSHELL = str(Path(os.environ["SystemRoot"]) / "System32/WindowsPowerShell/v1
 CASES = {"first": "A", "second": "B", "again": "A", "wrong": "A", "update": "A", "renewed": "A2", "panel": "A2"}
 
 
-def issue(name, issuer=None, server=False, days=1):
+def issue(name, issuer=None, server=False, days=1, key=None):
     """発行者・用途・有効期間を限定する。更新後の A2 は A と同じ名義で新しく発行する。"""
-    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    if key is None:
+        key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     subject = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, name)])
     now = datetime.now(timezone.utc)
     builder = (x509.CertificateBuilder().subject_name(subject)
@@ -44,7 +45,7 @@ def issue(name, issuer=None, server=False, days=1):
 class Fixture:
     """秘密鍵は試験で新しく発行したものだけを扱う。一般の証明書をエクスポートしない。"""
 
-    def __init__(self, directory):
+    def __init__(self, directory, reuse_renewal_key=False):
         self.directory = Path(directory)
         self.tag = secrets.token_hex(6)
         self.issuer = "CCC Lab " + self.tag
@@ -53,8 +54,10 @@ class Fixture:
         self.process = None
         ca = issue(self.issuer, days=3)
         server, server_key = issue("CCC Loopback", ca, server=True)
-        self.clients = {key: issue("CCC-" + key[0] + "-" + self.tag, ca, days=(2 if key == "A2" else 1))
-                        for key in ("A", "B", "A2")}
+        self.clients = {name: issue("CCC-" + name + "-" + self.tag, ca) for name in ("A", "B")}
+        # Windows 側の判別試験では、名義だけでなく鍵も同じまま更新するケースを作る。
+        renewal_key = self.clients["A"][1] if reuse_renewal_key else None
+        self.clients["A2"] = issue("CCC-A-" + self.tag, ca, days=2, key=renewal_key)
         self.fingerprints = {key: cert.fingerprint(hashes.SHA256()).hex().upper()
                              for key, (cert, _) in self.clients.items()}
         self.server_fingerprint = server.fingerprint(hashes.SHA256()).hex().upper()

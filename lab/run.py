@@ -46,13 +46,13 @@ class LabProfile:
         self.path.mkdir(exist_ok=False)
         self.process = None
 
-    def start(self, fixture):
+    def start(self, fixture, extra=()):
         """この合成サーバーの公開鍵だけを専用プロセスの試験用例外にし、Windows の信頼ストアを保つ。"""
         self.process = subprocess.Popen([str(chrome_path()), "--user-data-dir=" + str(self.path),
             "--no-first-run", "--no-default-browser-check", "--disable-background-mode",
             "--disable-background-networking", "--force-renderer-accessibility", "--lang=en-US",
             "--ignore-certificate-errors-spki-list=" + fixture.pin,
-            "--remote-debugging-port=0", "--remote-debugging-address=127.0.0.1", "about:blank"],
+            "--remote-debugging-port=0", "--remote-debugging-address=127.0.0.1", *extra, "about:blank"],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         deadline = time.monotonic() + 15
         while time.monotonic() < deadline and self.process.poll() is None:
@@ -90,6 +90,17 @@ class LabProfile:
                 time.sleep(.2)
 
 
+def choose(profile, cert, manual=False, cancel=False):
+    """この試験が発行した名義とシリアル番号を、指定した Chrome の選択画面で照合する。"""
+    serial = format(cert.serial_number, "X")
+    if manual:
+        print("Chrome で選択してください。", cert.subject.rfc4514_string(), serial, flush=True)
+        return
+    command = [POWERSHELL, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(HERE / "picker.ps1"),
+               "-BrowserPid", str(profile.process.pid), "-CommonName", cert.subject.rfc4514_string()[3:], "-Serial", serial]
+    subprocess.run(command + (["-Cancel"] if cancel else []), check=True, timeout=30)
+
+
 def test_run(binary, fixture, profiles, manual):
     """選択予定、ブラウザ側の独立判定、サーバーの受信証明書を別に観測する。"""
     def read_candidates():
@@ -124,13 +135,7 @@ def test_run(binary, fixture, profiles, manual):
             result = native(binary, action="open", id=profile.id, url=url, fingerprint=fixture.fingerprints[wanted])
         assert result == {"ok": True, "evidence": "unknown"}, result
         if pick:
-            cert = fixture.clients[chosen][0]
-            if manual:
-                print("Chrome で選択してください。", cert.subject.rfc4514_string(), format(cert.serial_number, "X"), flush=True)
-            else:
-                subprocess.run([POWERSHELL, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(HERE / "picker.ps1"),
-                    "-BrowserPid", str(profile.process.pid), "-CommonName", cert.subject.rfc4514_string()[3:],
-                    "-Serial", format(cert.serial_number, "X")], check=True, timeout=30)
+            choose(profile, fixture.clients[chosen][0], manual)
         observed = fixture.events.get(timeout=120 if manual else 15)
         assert observed["case"] == case and observed["actual"] == chosen, observed
         assert observed["fingerprint"] == fixture.fingerprints[chosen]
@@ -149,10 +154,18 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manual", action="store_true", help="Chrome の証明書選択を手動で行う")
     parser.add_argument("--extension-browser", type=Path, help="拡張画面も検証する場合の Chrome for Testing 実行ファイル")
+    parser.add_argument("--installed", action="store_true", help="Windows インストーラーで配置したファイルを検証する")
     args = parser.parse_args()
+    if args.installed and not args.extension_browser:
+        args.extension_browser = chrome_path()
     with tempfile.TemporaryDirectory(prefix="ccc-lab-") as directory, ExitStack() as cleanup:
-        subprocess.run([POWERSHELL, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
-                        str(HERE.parent / "native/Install.ps1"), "-BuildOnly", "-OutputDirectory", directory], check=True)
+        installed = PROFILES.parent / "program"
+        binary = installed / "host/CertificateHost.exe" if args.installed else Path(directory) / "CertificateHost.exe"
+        if not args.installed:
+            subprocess.run([POWERSHELL, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+                            str(HERE.parent / "native/Install.ps1"), "-BuildOnly", "-OutputDirectory", directory], check=True)
+        if not binary.is_file():
+            raise FileNotFoundError("検証する Windows 補助アプリが見つかりません。")
         fixture = Fixture(directory)
         cleanup.callback(fixture.close)
         fixture.start()
@@ -160,9 +173,9 @@ def main():
         for label in ("A", "B", "wrong"):
             profiles[label] = LabProfile()
             cleanup.callback(profiles[label].close)
-        test_run(Path(directory) / "CertificateHost.exe", fixture, profiles, args.manual)
+        test_run(binary, fixture, profiles, args.manual)
         if args.extension_browser:
-            # 拡張画面は隔離プロファイルに読み込み、銀行接続には上で検証した通常の Chrome を使う。
+            # 配布版は通常の Chrome の追加画面から導入し、開発版は Chrome for Testing に読み込む。
             base = "https://127.0.0.1:" + str(fixture.port)
             spec = Path(directory) / "panel.json"
             cold = LabProfile()
@@ -173,7 +186,8 @@ def main():
             spec.write_text(json.dumps({"a": fixture.fingerprints["A"], "a2": fixture.fingerprints["A2"],
                             "url": base + "/panel", "updateUrl": base + "/update",
                             "profileId": profiles["A"].id, "coldId": cold.id}), encoding="utf-8")
-            subprocess.run(["node", str(HERE / "panel-test.mjs"), str(args.extension_browser), str(spec)], check=True, timeout=60)
+            command = ["node", str(HERE / "panel-test.mjs"), str(args.extension_browser), str(spec)]
+            subprocess.run(command + ([str(installed / "extension")] if args.installed else []), check=True, timeout=90)
             subprocess.run(cold_check, check=True, timeout=30)
             observed = fixture.events.get(timeout=15)
             assert observed["case"] == "panel" and observed["fingerprint"] == fixture.fingerprints["A2"]

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "法人別 証明書切替",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Windows の既存の電子証明書を用途ごとに登録し、専用の Chrome ウィンドウで銀行を開きます。",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzvGo5YTpYBIletDVLQNeTTP2M32iTp8XnGLy2Sm/Y+WAsl14BcDlG4orDpWuzFjMd2qz9ozQHrCDy7FBcSj5FZJH19eZ+ctZ+osKTnfKFvMgN/VLhaQwpUy7hONWsmOJZTGkxA1vX4pVmp3rxgUpegXhaeOBvFEWNp88t9G6Larp/oefVq8fnD9d/S/qrn3DUqMcweQFqql7/FmVumcbtSEHU6BmZLba14rptJlNXf2qDDUN3j3v8ZNdS2ad+sNLELQO/lF7JT8IPjmgQPd9YxliXLZGW9wZjPKghPP99viAlb9WembsGNuW+SGx3ndylmT3+rnwU8byZhtOxCrdUwIDAQAB",
   "permissions": ["nativeMessaging", "storage"],

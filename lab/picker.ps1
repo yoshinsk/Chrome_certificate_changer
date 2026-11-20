@@ -2,7 +2,7 @@
 [CmdletBinding()]
 param([Parameter(Mandatory)][int]$BrowserPid,
       [Parameter(Mandatory)][ValidatePattern('^CCC-[AB]-[a-f0-9]{12}$')][string]$CommonName,
-      [Parameter(Mandatory)][ValidatePattern('^[0-9a-fA-F]+$')][string]$Serial)
+      [Parameter(Mandatory)][ValidatePattern('^[0-9a-fA-F]+$')][string]$Serial, [switch]$Cancel)
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient,UIAutomationTypes
 $root = [Windows.Automation.AutomationElement]::RootElement
@@ -15,6 +15,7 @@ $invoke = [Windows.Automation.InvokePattern]::Pattern
 $deadline = [DateTime]::UtcNow.AddSeconds(15)
 $requested = $false
 $stage = '名義を検索'
+$buttonNames = if ($Cancel) { @('Cancel','キャンセル') } else { @('OK','選択','Select') }
 
 # 名前とシリアルを含む試験行だけを選ぶ。既存の利用者のウィンドウにはキーを送らない。
 while ([DateTime]::UtcNow -lt $deadline) {
@@ -38,7 +39,7 @@ while ([DateTime]::UtcNow -lt $deadline) {
                 continue
             }
             $stage = '確定ボタンを検索'
-            $ok = $nodes | Where-Object { $_.Current.Name -in @('OK','選択','Select') -and
+            $ok = $nodes | Where-Object { $_.Current.Name -in $buttonNames -and
                 $_.Current.ControlType -eq [Windows.Automation.ControlType]::Button } | Select-Object -First 1
             if ($ok -and $ok.Current.IsEnabled) {
                 # ダイアログ表示直後の誤操作を防ぐ Chrome の待ち時間を確保してから確定する。

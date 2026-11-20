@@ -1,4 +1,4 @@
-// lab/panel-test.mjs | 使い捨ての Chrome for Testing で拡張画面の登録・更新・補助アプリ経由の起動を確認する。
+// lab/panel-test.mjs | 新しい Chrome プロファイルで初回導入、法人の登録・更新、補助アプリ経由の起動を確認する。
 import assert from "node:assert/strict";
 import {once} from "node:events";
 import {mkdtemp, readFile, realpath, rm} from "node:fs/promises";
@@ -8,14 +8,18 @@ import {spawn} from "node:child_process";
 import {setTimeout as delay} from "node:timers/promises";
 import {fileURLToPath} from "node:url";
 import {session} from "./protocol.mjs";
+import {loadUnpacked} from "./load-unpacked.mjs";
 
 const [browser, fixturePath] = process.argv.slice(2);
 const fixture = JSON.parse(await readFile(fixturePath, "utf8"));
 const parent = await realpath(os.tmpdir());
 const profile = await mkdtemp(path.join(parent, "ccc-panel-"));
-const extension = fileURLToPath(new URL("../extension/", import.meta.url)).replace(/[\\/]$/, "");
-const child = spawn(browser, ["--user-data-dir=" + profile, "--headless", "--no-first-run", "--no-default-browser-check",
-  "--disable-background-networking", "--remote-debugging-port=0", "--load-extension=" + extension, "about:blank"],
+// 配布版の試験では、インストーラーが配置した拡張機能をそのまま読み込む。
+const extension = process.argv[4] || fileURLToPath(new URL("../extension/", import.meta.url)).replace(/[\\/]$/, "");
+const boot = process.argv[4] ? ["--force-renderer-accessibility", "about:blank"]
+  : ["--headless", "--load-extension=" + extension, "about:blank"];
+const child = spawn(browser, ["--user-data-dir=" + profile, "--no-first-run", "--no-default-browser-check",
+  "--disable-background-networking", "--remote-debugging-port=0", ...boot],
   {stdio: "ignore", windowsHide: true});
 const closed = once(child, "exit");
 const extensionId = "aeieeneijdcmhecnfpddppnnlgbkopaj";
@@ -64,17 +68,36 @@ let debugPort;
 try {
   let active;
   for (let i = 0; i < 80 && !active; i++) {
-    if (child.exitCode !== null) throw new Error("Chrome for Testing の起動に失敗しました。");
-    try { active = await readFile(path.join(profile, "DevToolsActivePort"), "utf8"); }
-    catch (error) { if (error.code !== "ENOENT") throw error; await delay(100); }
+    if (child.exitCode !== null) throw new Error("試験用 Chrome の起動に失敗しました。");
+    try {
+      const contents = await readFile(path.join(profile, "DevToolsActivePort"), "utf8");
+      if (/^\d+\r?\n\/devtools\/browser\/[\w-]+\s*$/.test(contents)) active = contents;
+    } catch (error) {
+      if (!["ENOENT", "EBUSY", "EPERM"].includes(error.code)) throw error;
+    }
+    if (!active) await delay(100);
   }
-  if (!active) throw new Error("Chrome for Testing の接続先が見つかりません。");
+  if (!active) throw new Error("試験用 Chrome の接続先が見つかりません。");
   const [port, devPath] = active.trim().split(/\r?\n/);
   debugPort = port;
   const address = "127.0.0.1:" + port;
   browserSocket = "ws://" + address + devPath;
+  if (process.argv[4]) await loadUnpacked(port, child.pid, extensionId);
   const page = "chrome-extension://" + extensionId + "/panel.html?tab";
-  const tab = await (await fetch("http://" + address + "/json/new?" + encodeURIComponent(page), {method: "PUT"})).json();
+  let tab;
+  if (process.argv[4]) {
+    // 配布ガイドと同じ URL を Chrome の起動引数で渡し、利用者が開く登録画面まで確かめる。
+    const opener = spawn(browser, ["--user-data-dir=" + profile, page], {stdio: "ignore", windowsHide: true});
+    await once(opener, "exit");
+    for (let i = 0; i < 60 && !tab; i++) {
+      const tabs = await (await fetch("http://" + address + "/json/list")).json();
+      tab = tabs.find(item => item.type === "page" && item.url === page);
+      if (!tab) await delay(100);
+    }
+    assert.ok(tab, "ガイドと同じ方法で法人の登録画面を開けませんでした。");
+  } else {
+    tab = await (await fetch("http://" + address + "/json/new?" + encodeURIComponent(page), {method: "PUT"})).json();
+  }
   async function evaluate(expression) {
     const result = await session(tab.webSocketDebuggerUrl, port, send =>
       send("Runtime.evaluate", {expression, awaitPromise: true, returnByValue: true}));

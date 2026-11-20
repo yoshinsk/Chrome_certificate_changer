@@ -11,7 +11,7 @@ $binary = Join-Path $dest 'CertificateHost.exe'
 # 既存の登録を保ったまま再コンパイルできるよう、一時ファイルへのビルド成功後に配置する。
 $tempBinary = Join-Path $dest ("build-{0}.exe" -f [guid]::NewGuid())
 try {
-    & $compiler /nologo /target:exe /platform:anycpu /codepage:65001 /r:System.Web.Extensions.dll "/out:$tempBinary" (Join-Path $PSScriptRoot 'CertificateHost.cs')
+    & $compiler /nologo /target:exe /platform:anycpu /codepage:65001 /r:System.Web.Extensions.dll "/out:$tempBinary" (Join-Path $PSScriptRoot 'CertificateHost.cs') (Join-Path $PSScriptRoot 'ChromeBrowser.cs')
     if ($LASTEXITCODE -ne 0) { throw '補助アプリのビルドに失敗しました。' }
     [IO.File]::Copy($tempBinary, $binary, $true)
 } finally {
@@ -19,11 +19,9 @@ try {
 }
 if ($BuildOnly) { Write-Output $binary; return }
 
-# マニフェストの公開鍵と対応する固定IDだけに Native Messaging を許可する。
+# Windows はマニフェストを基準に相対パスを解決する。配布版と同じ固定ID・許可範囲を使う。
 $manifestPath = Join-Path $dest 'host.json'
-$manifest = [ordered]@{ name = $hostName; description = 'Windows client certificate launcher'; path = $binary; type = 'stdio'
-    allowed_origins = @('chrome-extension://aeieeneijdcmhecnfpddppnnlgbkopaj/') }
-[IO.File]::WriteAllText($manifestPath, ($manifest | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
+[IO.File]::Copy((Join-Path $PSScriptRoot 'host.json'), $manifestPath, $true)
 New-Item -Path $registry -Force | Out-Null
 Set-Item -LiteralPath $registry -Value $manifestPath
 Write-Output "補助アプリを登録しました。 $binary"

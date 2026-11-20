@@ -25,7 +25,7 @@ const server = createServer({
   const wanted = fixture.cases[expected];
   const matches = wanted === actual;
   const event = {case: expected, wanted, actual: actual ?? "未登録", fingerprint, matches,
-    resumed: request.socket.isSessionReused()};
+    resumed: request.socket.isSessionReused(), protocol: request.socket.getProtocol()};
   console.log(JSON.stringify(event));
   response.writeHead(200, {"Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store",
     "Content-Security-Policy": "default-src 'none'; connect-src 'self'", Connection: "close"});

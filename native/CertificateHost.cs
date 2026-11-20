@@ -1,7 +1,6 @@
 // native/CertificateHost.cs | Windows の既存証明書を読み取り、登録ごとの Chrome を起動する補助アプリ。
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -126,17 +125,12 @@ internal static class CertificateHost
     // 同じ用途では証明書更新後も同じディレクトリを使い、銀行の Cookie や更新用の設定を維持する。
     private static void StartChrome(Guid id, string url)
     {
-        var roots = new[] { Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) };
-        string chrome = roots.Select(root => Path.Combine(root, @"Google\Chrome\Application\chrome.exe")).FirstOrDefault(File.Exists);
-        if (chrome == null) throw new FileNotFoundException("Google Chrome が見つかりません。");
-        string profile = Path.Combine(roots[2], "ChromeCertificateChanger", "profiles", id.ToString("D"));
+        string profile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "ChromeCertificateChanger", "profiles", id.ToString("D"));
         Directory.CreateDirectory(profile);
         string arguments = "--user-data-dir=\"" + profile + "\" --no-first-run --no-default-browser-check " +
             "--disable-background-mode --new-window \"" + url + "\"";
-        // Chrome による Native Messaging ホスト終了後も、専用のブラウザは利用者が閉じるまで維持する。
-        using (Process.Start(new ProcessStartInfo(chrome, arguments) { UseShellExecute = true })) { }
+        ChromeBrowser.Open(arguments);
     }
 
     // シリアル化するのは公開証明書の情報だけ。秘密鍵ハンドルの取得や署名は Chrome に任せる。

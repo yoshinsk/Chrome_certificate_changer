@@ -1,0 +1,7 @@
+{
+  "name": "jp.chrome_certificate_changer.host",
+  "description": "Windows client certificate launcher",
+  "path": "CertificateHost.exe",
+  "type": "stdio",
+  "allowed_origins": ["chrome-extension://aeieeneijdcmhecnfpddppnnlgbkopaj/"]
+}

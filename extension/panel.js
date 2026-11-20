@@ -21,7 +21,7 @@ async function native(request) {
   try {
     result = await chrome.runtime.sendNativeMessage(hostName, request);
   } catch {
-    throw new Error("Windows 補助アプリに接続できません。Readme.md の導入手順を確認してください。");
+    throw new Error("Windows 補助アプリに接続できません。インストーラーをもう一度開いてください。");
   }
   if (!result?.ok) throw new Error(result?.error || "補助アプリから応答を取得できません。");
   return result;
@@ -131,7 +131,7 @@ async function launch() {
     const entry = await currentEntry();
     if (!entry) return;
     await native({action: "open", id: entry.id, url: entry.url, fingerprint: entry.certificate.fingerprint});
-    message(`${entryName(entry)} の起動を依頼しました。証明書の選択画面で名義と有効期限を確かめてください。`);
+    message(`${entryName(entry)} の起動を依頼しました。証明書を選ぶときは、上に表示したシリアル番号と照合してください。`);
   } finally {
     showSelection();
   }

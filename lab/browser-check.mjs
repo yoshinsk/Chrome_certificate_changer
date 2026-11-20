@@ -18,7 +18,7 @@ if (operation === "close") {
   await session("ws://" + origin + browserPath, port, send => send("Browser.close"));
 } else {
   const url = new URL(target);
-  if (operation !== "certificate" || url.origin !== "https://127.0.0.1:" + url.port ||
+  if (!["certificate", "error"].includes(operation) || url.origin !== "https://127.0.0.1:" + url.port ||
       !/^\/(first|second|again|wrong|update|renewed)$/.test(url.pathname)) throw new Error("検証用のURLを指定してください。");
   let tab;
   for (let i = 0; i < 40 && !tab; i++) {
@@ -27,6 +27,18 @@ if (operation === "close") {
     if (!tab) await delay(100);
   }
   if (!tab) throw new Error("検証用のタブが見つかりません。");
+  // 取消時は今回のURLが到達不能だったことまで確認し、単に受信待ちを打ち切った場合と区別する。
+  if (operation === "error") {
+    await session(tab.webSocketDebuggerUrl, port, async send => {
+      for (let i = 0; i < 40; i++) {
+        const {frameTree: {frame}} = await send("Page.getFrameTree");
+        if (frame.unreachableUrl === target && frame.url === "chrome-error://chromewebdata/") return;
+        await delay(100);
+      }
+      throw new Error("取消後の接続エラーを確認できません。");
+    });
+    process.exit(0);
+  }
   // この診断 API が返す接続先証明書を比較する。ページ本文やサーバー側の照合結果は読まない。
   const {tableNames: chain} = await session(tab.webSocketDebuggerUrl, port, async send => {
     await send("Network.enable");
